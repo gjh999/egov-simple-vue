@@ -1,0 +1,27 @@
+{
+    "name": "egov-simple-vue",
+    "version": "1.0.0",
+    "scripts": {
+        "dev": "vite",
+        "build": "vue-tsc -b && vite build",
+        "preview": "vite preview",
+        "test": "vitest run",
+        "test:watch": "vitest"
+    },
+    "description": "eGovFrame 심플 홈페이지 SPA — Vue 3 프론트엔드",
+    "dependencies": {
+        "vue": "^3.5.41",
+        "vue-router": "^5.2.0"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-vue": "^6.0.8",
+        "@vue/test-utils": "^2.4.11",
+        "jsdom": "^29.1.1",
+        "typescript": "~6.0.2",
+        "vite": "^8.2.2",
+        "vitest": "^4.1.11",
+        "vue-tsc": "^3.3.10"
+    },
+    "private": true,
+    "type": "module"
+}
