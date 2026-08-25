@@ -12,29 +12,59 @@ const { t } = useI18n()
 const router = useRouter()
 const today = new Date()
 
+/** 조회 단위 — 서버의 /schedule/{month|week|daily} 에 그대로 대응한다. */
+type ScheduleView = 'month' | 'week' | 'daily'
+
 const year = ref(today.getFullYear())
 // 서버의 month 는 0-based 다(Calendar 규약). Date#getMonth() 와 같은 기준이라 그대로 쓴다.
 const month = ref(today.getMonth())
+const date = ref(today.getDate())
+// 월간 · 주간 · 일간 — 서버가 세 조회를 모두 제공하므로 화면에서 고르게 한다.
+const view = ref<ScheduleView>('month')
 const actionError = ref<string | null>(null)
 
-const { data, loading, error, reload } = useAsync(
-  () => scheduleApi.month({ year: year.value, month: month.value }),
-  [year, month],
-)
+const { data, loading, error, reload } = useAsync(() => {
+  if (view.value === 'week') return scheduleApi.week({ year: year.value, month: month.value, date: date.value })
+  if (view.value === 'daily') return scheduleApi.daily({ year: year.value, month: month.value, date: date.value })
+  return scheduleApi.month({ year: year.value, month: month.value })
+}, [view, year, month, date])
 
 const schedules = computed(() => (data.value?.resultList ?? []) as Schedule[])
 
-function moveMonth(delta: number) {
-  const next = new Date(year.value, month.value + delta, 1)
+/** 보기 단위만큼 앞뒤로 옮긴다 — 월간은 한 달, 주간은 7일, 일간은 하루. */
+function move(delta: number) {
+  const step = view.value === 'week' ? 7 * delta : delta
+  const next =
+    view.value === 'month'
+      ? new Date(year.value, month.value + delta, 1)
+      : new Date(year.value, month.value, date.value + step)
   year.value = next.getFullYear()
   month.value = next.getMonth()
+  if (view.value !== 'month') date.value = next.getDate()
 }
 
 function goToday() {
   const now = new Date()
   year.value = now.getFullYear()
   month.value = now.getMonth()
+  date.value = now.getDate()
 }
+
+/** 현재 보고 있는 기간 표시 */
+const periodLabel = computed(() => {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const ym = `${year.value}. ${pad(month.value + 1)}`
+  if (view.value === 'month') return ym
+  if (view.value === 'daily') return `${ym}. ${pad(date.value)}`
+  // 주간은 일요일~토요일 범위를 보여준다(서버도 같은 기준으로 한 주를 판단한다).
+  const base = new Date(year.value, month.value, date.value)
+  const start = new Date(base)
+  start.setDate(base.getDate() - base.getDay())
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  const fmt = (d: Date) => `${d.getFullYear()}. ${pad(d.getMonth() + 1)}. ${pad(d.getDate())}`
+  return `${fmt(start)} ~ ${fmt(end)}`
+})
 
 /** yyyyMMddHHmm → yyyy-MM-dd HH:mm (서버가 붙여 보내는 원시 형식을 사람이 읽게 바꾼다) */
 function formatDateTime(raw: string | undefined): string {
@@ -70,13 +100,33 @@ async function handleDelete(schdulId: string) {
 
   <AppFeedback v-if="actionError" state="error" :message="actionError" />
 
-  <div class="d-flex align-items-center gap-2 mb-3">
-    <button type="button" class="krds-btn tertiary small" @click="moveMonth(-1)">
-      <i class="bi bi-chevron-left" aria-hidden="true" /> {{ t('schedule.prevMonth', '이전 달') }}
+  <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+    <div class="btn-group" role="group" :aria-label="t('schedule.view', '조회 단위')">
+      <button
+        v-for="v in (['month', 'week', 'daily'] as const)"
+        :key="v"
+        type="button"
+        class="krds-btn small"
+        :class="view === v ? 'primary' : 'tertiary'"
+        :aria-pressed="view === v"
+        @click="view = v"
+      >
+        {{
+          v === 'month'
+            ? t('schedule.view.month', '월간')
+            : v === 'week'
+              ? t('schedule.view.week', '주간')
+              : t('schedule.view.daily', '일간')
+        }}
+      </button>
+    </div>
+
+    <button type="button" class="krds-btn tertiary small" @click="move(-1)">
+      <i class="bi bi-chevron-left" aria-hidden="true" /> {{ t('com.prev', '이전') }}
     </button>
-    <strong aria-live="polite">{{ year }}. {{ String(month + 1).padStart(2, '0') }}</strong>
-    <button type="button" class="krds-btn tertiary small" @click="moveMonth(1)">
-      {{ t('schedule.nextMonth', '다음 달') }} <i class="bi bi-chevron-right" aria-hidden="true" />
+    <strong aria-live="polite">{{ periodLabel }}</strong>
+    <button type="button" class="krds-btn tertiary small" @click="move(1)">
+      {{ t('com.next', '다음') }} <i class="bi bi-chevron-right" aria-hidden="true" />
     </button>
     <button type="button" class="krds-btn secondary small ms-2" @click="goToday">
       {{ t('schedule.today', '오늘') }}
@@ -88,12 +138,12 @@ async function handleDelete(schdulId: string) {
 
   <template v-else>
     <AppFeedback v-if="schedules.length === 0" state="empty">
-      {{ t('schedule.empty', '해당 월에 등록된 일정이 없습니다.') }}
+      {{ t('schedule.empty', '해당 기간에 등록된 일정이 없습니다.') }}
     </AppFeedback>
 
     <div v-else class="krds-table-wrap">
       <table class="tbl">
-        <caption>{{ t('schedule.listCaption', '월별 일정 목록 — 일정명, 구분, 시작, 종료, 장소') }}</caption>
+        <caption>{{ t('schedule.listCaption', '일정 목록 — 일정명, 구분, 시작, 종료, 장소') }}</caption>
         <colgroup>
           <col />
           <col style="width: 10%" />

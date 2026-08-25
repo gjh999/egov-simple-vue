@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '../auth/useAuth'
 import { useI18n } from '../i18n/useI18n'
-import { GALLERY_BBS_ID, NOTICE_BBS_ID } from '../constants'
+import { GALLERY_BBS_ID, NOTICE_BBS_ID, REFERENCE_BBS_ID } from '../constants'
 
 const { t, lang, setLang } = useI18n()
 const { user, isAuthenticated, isAdmin, logout } = useAuth()
@@ -121,6 +121,11 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
             <RouterLink to="/" class="nav-link" @click="navOpen = false">{{ t('nav.home', '홈') }}</RouterLink>
           </li>
           <li class="nav-item">
+            <RouterLink to="/info/about" class="nav-link" @click="navOpen = false">
+              {{ t('nav.introGroup', '사이트 소개') }}
+            </RouterLink>
+          </li>
+          <li class="nav-item">
             <RouterLink :to="`/board/${NOTICE_BBS_ID}`" class="nav-link" @click="navOpen = false">
               {{ t('nav.notice', '공지사항') }}
             </RouterLink>
@@ -128,6 +133,11 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll))
           <li class="nav-item">
             <RouterLink :to="`/board/${GALLERY_BBS_ID}`" class="nav-link" @click="navOpen = false">
               {{ t('nav.gallery', '갤러리') }}
+            </RouterLink>
+          </li>
+          <li class="nav-item">
+            <RouterLink :to="`/board/${REFERENCE_BBS_ID}`" class="nav-link" @click="navOpen = false">
+              {{ t('nav.reference', '자료실') }}
             </RouterLink>
           </li>
           <li class="nav-item">

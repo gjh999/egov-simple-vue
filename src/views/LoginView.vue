@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../auth/useAuth'
 import { useI18n } from '../i18n/useI18n'
+import SnsLoginButtons from '../components/SnsLoginButtons.vue'
 import { ApiError } from '../api/client'
 
 const { t } = useI18n()
@@ -80,6 +81,8 @@ async function handleSubmit() {
               {{ submitting ? t('com.processing', '처리 중…') : t('login.submit', '로그인') }}
             </button>
           </form>
+
+          <SnsLoginButtons />
         </div>
       </div>
     </div>

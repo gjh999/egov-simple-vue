@@ -4,6 +4,8 @@ import { initAuth, useAuth } from '../auth/useAuth'
 import { NOTICE_BBS_ID } from '../constants'
 import MainView from '../views/MainView.vue'
 import LoginView from '../views/LoginView.vue'
+import SnsCallbackView from '../views/SnsCallbackView.vue'
+import InfoView from '../views/InfoView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import BoardListView from '../views/BoardListView.vue'
 import BoardDetailView from '../views/BoardDetailView.vue'
@@ -39,7 +41,12 @@ function adminRoute(path: string, name: string, screen: string): RouteRecordRaw 
 
 const routes: RouteRecordRaw[] = [
   { path: '/', name: 'main', component: MainView },
+  // 사이트 소개 — 슬러그별 문구는 서버 메시지 번들에서 온다
+  { path: '/info', redirect: '/info/about' },
+  { path: '/info/:slug', name: 'info', component: InfoView },
   { path: '/login', name: 'login', component: LoginView },
+  // SNS 공급자가 되돌려보내는 주소. 백엔드 Sns.*.callbackUrl 과 같아야 한다.
+  { path: '/login/:provider/callback', name: 'sns-callback', component: SnsCallbackView },
   { path: '/register', name: 'register', component: RegisterView },
 
   // 게시판 — 목록·상세는 비로그인도 볼 수 있고, 쓰기는 로그인이 필요하다
